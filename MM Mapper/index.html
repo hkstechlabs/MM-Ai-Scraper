@@ -1,151 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MM SKU Mapper</title>
-    <link rel="stylesheet" href="./style.css">
-    <link rel="shortcut icon" href="./assets/mm.avif" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MobileMonster Types</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="shortcut icon" href="./assets/mm.avif" type="image/x-icon">
 </head>
-
 <body>
-    <div class="container">
-        <header>
-            <h1>MM SKU Mapper</h1>
-            <p>Map competitor SKUs to MM products</p>
-        </header>
+  <h1>Device Types</h1>
+  
+  <div id="types-container" class="cards-container">
+  <div id="types-container" class="cards-container">
+    <!-- Cards will be dynamically added here -->
+  </div>
+</div>
 
-        <div class="controls">
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by product title..." />
-                <button id="searchBtn">Search</button>
-            </div>
-            <button id="addProductBtn" class="add-btn">+ Add New Product</button>
-        </div>
 
-        <div class="table-container">
-            <table id="mappingTable">
-                <thead>
-                    <!-- Header will be generated dynamically -->
-                </thead>
-                <tbody id="tableBody">
-                </tbody>
-            </table>
-            
-            <!-- Pagination Controls -->
-            <div class="pagination-container">
-                <div class="pagination-info">
-                    <span id="paginationInfo">Showing 0 - 0 of 0 items</span>
-                </div>
-                <div class="pagination-controls">
-                    <button id="firstPageBtn" class="pagination-btn" onclick="goToPage(1)">
-                        <span>First</span>
-                    </button>
-                    <button id="prevPageBtn" class="pagination-btn" onclick="goToPage(currentPage - 1)">
-                        <span>Previous</span>
-                    </button>
-                    <div class="page-numbers" id="pageNumbers">
-                        <!-- Page numbers will be generated dynamically -->
-                    </div>
-                    <button id="nextPageBtn" class="pagination-btn" onclick="goToPage(currentPage + 1)">
-                        <span>Next</span>
-                    </button>
-                    <button id="lastPageBtn" class="pagination-btn" onclick="goToPage(totalPages)">
-                        <span>Last</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div id="brands-container" class="cards-container" style="display:none;">
+    <button id="back-btn">← Back</button>
+    <!-- Brand cards will go here -->
+  </div>
 
-    <!-- Add Product Modal -->
-    <div id="addProductModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Add New Product</h2>
-            <form id="addProductForm">
-                <div class="form-group">
-                    <label for="productId">Product ID:</label>
-                    <input type="text" id="productId" required placeholder="e.g., MM-IP13PM-64-SG">
-                </div>
-                <div class="form-group">
-                    <label for="productTitle">Product Title:</label>
-                    <input type="text" id="productTitle" required placeholder="e.g., iPhone 13 Pro Max - 64GB - Space Gray">
-                </div>
-                <div class="form-group">
-                    <label for="productSKU">SKU:</label>
-                    <input type="text" id="productSKU" required placeholder="e.g., iPhone 13 Pro Max - 64GB - Space Gray">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="productPrice">Price:</label>
-                        <input type="number" id="productPrice" step="0.01" required placeholder="400.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="productStorage">Storage:</label>
-                        <input type="text" id="productStorage" required placeholder="e.g., 64GB, 128GB">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="productCondition">Condition:</label>
-                        <input type="text" id="productCondition" required placeholder="e.g., Excellent, Good, Fair">
-                    </div>
-                    <div class="form-group">
-                        <label for="productColour">Colour:</label>
-                        <input type="text" id="productColour" required placeholder="e.g., Space Gray, Gold">
-                    </div>
-                </div>
-                <div class="form-buttons">
-                    <button type="submit">Add Product</button>
-                    <button type="button" id="cancelBtn">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Custom Alert Modal -->
-    <div id="customAlert" class="modal alert-modal">
-        <div class="modal-content alert-content">
-            <div class="alert-header">
-                <div class="alert-icon" id="alertIcon">⚠️</div>
-                <h3 id="alertTitle">Alert</h3>
-            </div>
-            <div class="alert-body">
-                <p id="alertMessage"></p>
-            </div>
-            <div class="alert-buttons">
-                <button id="alertOkBtn" class="alert-btn primary">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Custom Confirm Modal -->
-    <div id="customConfirm" class="modal confirm-modal">
-        <div class="modal-content confirm-content">
-            <div class="confirm-header">
-                <div class="confirm-icon">❓</div>
-                <h3>Confirm Action</h3>
-            </div>
-            <div class="confirm-body">
-                <p id="confirmMessage"></p>
-            </div>
-            <div class="confirm-buttons">
-                <button id="confirmCancelBtn" class="alert-btn secondary">Cancel</button>
-                <button id="confirmOkBtn" class="alert-btn danger">Confirm</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Success Toast -->
-    <div id="successToast" class="toast success-toast">
-        <div class="toast-icon">✅</div>
-        <div class="toast-message" id="toastMessage"></div>
-        <button class="toast-close" id="toastClose">&times;</button>
-    </div>
-
-    <script src="./script.js"></script>
+  <script src="script.js"></script>
 </body>
-
 </html>
