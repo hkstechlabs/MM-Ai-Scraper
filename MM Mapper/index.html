@@ -8,7 +8,11 @@
   <link rel="shortcut icon" href="./assets/mm.avif" type="image/x-icon">
 </head>
 <body>
-  <h1>Device Types</h1>
+  <h1>MM SKU Mapper</h1>
+  
+  <div id="search-container" class="search-container">
+    <input type="text" id="search-input" placeholder="Search device types..." />
+  </div>
   
   <div id="types-container" class="cards-container">
   <div id="types-container" class="cards-container">
@@ -17,9 +21,17 @@
 </div>
 
 
-  <div id="brands-container" class="cards-container" style="display:none;">
-    <button id="back-btn">← Back</button>
-    <!-- Brand cards will go here -->
+  <div id="brands-container" class="brands-view" style="display:none;">
+    <div class="brands-header">
+      <h2 id="brands-title">Brands</h2>
+      <button id="back-btn">← Back</button>
+    </div>
+    <div id="brands-search-container" class="search-container">
+      <input type="text" id="brands-search-input" placeholder="Search brands..." />
+    </div>
+    <div class="brands-cards-container">
+      <!-- Brand cards will go here -->
+    </div>
   </div>
 
   <script src="script.js"></script>
