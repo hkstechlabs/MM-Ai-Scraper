@@ -11,6 +11,9 @@
   <h1>MM SKU Mapper</h1>
   
   <div id="search-container" class="search-container">
+    <div class="brands-header">
+    <h2>Collections</h2>
+  </div>
     <input type="text" id="search-input" placeholder="Search device types..." />
   </div>
   
@@ -33,6 +36,32 @@
       <!-- Brand cards will go here -->
     </div>
   </div>
+
+  <div id="products-container" style="display:none;">
+  <div class="products-header">
+    <h2 id="products-title">Products</h2>
+    <button id="products-back-btn">← Back to brands</button>
+  </div>
+  <div class="products-controls">
+    <div class="sort-controls">
+      <label for="sort-select">Sort by:</label>
+      <select id="sort-select">
+        <option value="name">Name (A-Z)</option>
+        <option value="name-desc">Name (Z-A)</option>
+        <option value="variants-count">Variants Count (Low to High)</option>
+        <option value="variants-count-desc">Variants Count (High to Low)</option>
+        <option value="id">Product ID (Low to High)</option>
+        <option value="id-desc">Product ID (High to Low)</option>
+      </select>
+    </div>
+  </div>
+  <div id="products-list" class="brands-cards-container">
+    <!-- Products cards will render here -->
+  </div>
+</div>
+
+
+
 
   <script src="script.js"></script>
 </body>
