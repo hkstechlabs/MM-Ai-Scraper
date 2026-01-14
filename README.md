@@ -1,6 +1,6 @@
 # MM Scraper - Competitor Price Monitoring System
 
-A comprehensive web scraping system that monitors competitor pricing data for Mobile Monster. The system fetches product mappings from Supabase, scrapes competitor websites, normalizes the data, and stores results for analysis.
+A comprehensive web scraping system that monitors competitor pricing data for Mobile Monster. The system fetches product mappings from Supabase, scrapes competitor websites, normalizes the data, and automatically updates variant pricing in the database.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This scraper system automates the collection of pricing data from multiple compe
 - **Reebelo** - Via API integration
 - **Green Gadgets** - Via Shopify product JSON endpoints
 
-The system uses dynamic SKU mappings from Supabase to ensure accurate product matching and tracks variant IDs for future price updates.
+The system uses dynamic SKU mappings from Supabase to ensure accurate product matching and automatically updates variant prices and stock levels in real-time.
 
 ## Features
 
@@ -16,7 +16,9 @@ The system uses dynamic SKU mappings from Supabase to ensure accurate product ma
 - **Multi-Competitor Support** - Extensible architecture for adding new competitors
 - **Data Normalization** - Unified data format across all competitors
 - **Variant Tracking** - Maintains relationship between competitor SKUs and MM variants
-- **Automated Results Storage** - Timestamped JSON files for each scraping run
+- **Automated Database Updates** - Directly updates variant pricing and stock in Supabase
+- **Price Aggregation** - Automatically selects lowest price per competitor
+- **Stock Summation** - Totals available stock across all offers
 - **Error Handling** - Graceful failure handling per scraper
 
 ## Architecture
@@ -35,7 +37,6 @@ mm-scraper/
 │   └── index.js           # Normalizer registry
 ├── services/              # External service integrations
 │   └── supabase.js        # Supabase API client
-├── results/               # Output directory for scraped data
 └── MM Mapper/             # Brand logo assets
 ```
 
@@ -54,15 +55,21 @@ npm install
 
 ### Supabase Setup
 
-The system connects to Supabase to fetch product mappings. Configuration is in `services/supabase.js`:
+The system connects to Supabase for two purposes:
+1. Fetch product mappings from the `mappings` table
+2. Update pricing and stock in the `variants` table
+
+Configuration is in `services/supabase.js`:
 
 ```javascript
-SUPABASE_URL: https://anmlzspuvlfqkvonnmdz.supabase.co/rest/v1/mappings
+SUPABASE_BASE_URL: https://anmlzspuvlfqkvonnmdz.supabase.co/rest/v1
 ```
 
-### Mappings Table Structure
+### Database Schema
 
-The Supabase `mappings` table should have the following structure:
+#### Mappings Table
+
+The `mappings` table structure:
 
 ```json
 {
@@ -74,6 +81,18 @@ The Supabase `mappings` table should have the following structure:
   "variant": 1992
 }
 ```
+
+#### Variants Table
+
+The system updates these columns in the `variants` table:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | integer | Primary key (variant ID) |
+| `reebelo_price` | numeric(10,2) | Lowest Reebelo price |
+| `greengadgets_price` | numeric(10,2) | Lowest Green Gadgets price |
+| `reebelo_stock` | integer | Total Reebelo stock |
+| `greengadgets_stock` | integer | Total Green Gadgets stock |
 
 ## Usage
 
@@ -89,47 +108,30 @@ node main.js
 2. **Transform Data** - Organizes mappings by competitor
 3. **Run Scrapers** - Each scraper fetches data for its mapped SKUs
 4. **Normalize Data** - Converts raw data to unified format
-5. **Save Results** - Writes timestamped JSON file to `results/` directory
+5. **Aggregate by Variant** - Groups prices by variant ID, selecting lowest prices
+6. **Update Database** - Updates each variant with latest competitor pricing and stock
 
-### Output
+### Example Output
 
-Results are saved as `results/scraper-results-{timestamp}.json`:
+```
+📥 Fetching mappings from Supabase...
+✅ Loaded 1 mappings from Supabase
+✅ reebelo scraped 1 prices
+✅ green-gadgets scraped 60 prices
 
-```json
-[
-  {
-    "source": "reebelo",
-    "scrapedAt": "2026-01-14T12:30:45.123Z",
-    "data": [
-      {
-        "competitor": "reebelo",
-        "sku": "APPLE-IPHONE-11-PRO-256GB-SPACE-GREY-EX-DISPLAYDEMO",
-        "price": 899.99,
-        "currency": "AUD",
-        "condition": "Excellent",
-        "storage": "256GB",
-        "color": "Space Grey",
-        "stock": 5,
-        "variantId": 1992,
-        "mmSku": "IPH17PROMAX256ORGNIB",
-        "mappingId": 7789,
-        "sourceUrl": "https://...",
-        "fetchedAt": "2026-01-14T12:30:45.123Z"
-      }
-    ]
-  },
-  {
-    "source": "green-gadgets",
-    "scrapedAt": "2026-01-14T12:30:50.456Z",
-    "data": [...]
-  }
-]
+📊 Aggregating prices by variant...
+📦 Found 1 variants to update
+✅ Updated variant 1992
+
+🎉 Update complete!
+   ✅ Success: 1
+   ❌ Errors: 0
 ```
 
 ## Data Flow
 
 ```
-Supabase Mappings
+Supabase Mappings Table
       ↓
 Transform Mappings
       ↓
@@ -145,7 +147,28 @@ Transform Mappings
       ↓              ↓
     Unified Data Format
       ↓
-  JSON File Output
+  Aggregate by Variant
+  (Lowest Price + Total Stock)
+      ↓
+  Update Supabase Variants
+```
+
+## Price Aggregation Logic
+
+For each variant:
+- **Price**: Takes the **lowest price** from each competitor (best deal for customers)
+- **Stock**: **Sums up** all available stock from each competitor
+
+Example:
+```javascript
+// Reebelo has 3 offers for variant 1992
+Offer 1: $499.99, stock: 2
+Offer 2: $457.99, stock: 0  ← Lowest price selected
+Offer 3: $520.00, stock: 1
+
+// Result stored in database
+reebelo_price: 457.99
+reebelo_stock: 3  // (2 + 0 + 1)
 ```
 
 ## Normalized Data Schema
@@ -202,27 +225,31 @@ Each price record includes:
    - Add to `scrapers/index.js`
    - Add to `normalizers/index.js`
 
-4. **Update Supabase Service**
-   - Add column to mappings table
+4. **Update Supabase**
+   - Add column to `mappings` table (e.g., `new_competitor`)
+   - Add columns to `variants` table (e.g., `new_competitor_price`, `new_competitor_stock`)
    - Update `transformMappings()` in `services/supabase.js`
+   - Update `aggregateByVariant()` in `main.js`
 
 ## Roadmap
 
 ### Upcoming Features
 
 - **AI-Powered Pricing Recommendations** - Machine learning model to suggest optimal pricing based on competitor data, market trends, and historical performance
-- **Automated Price Updates** - Direct integration with MM variants API to update prices
 - **Price History Tracking** - Store historical pricing data for trend analysis
 - **Alert System** - Notifications for significant price changes
 - **Dashboard** - Web interface for monitoring and analysis
 - **Scheduled Runs** - Cron job integration for automated scraping
+- **Multi-Currency Support** - Handle different currencies and conversions
+- **Performance Metrics** - Track scraping success rates and timing
 
 ## Error Handling
 
 - Each scraper runs independently - one failure doesn't stop others
-- Errors are logged with scraper name and message
+- Errors are logged with scraper name and detailed error messages
 - Empty mappings result in warning, not failure
-- Results are saved even if some scrapers fail
+- Database updates continue even if some variants fail
+- Detailed error logging shows status codes and attempted data
 
 ## Logging
 
@@ -230,8 +257,8 @@ Console output includes:
 - ✅ Success messages with item counts
 - ❌ Error messages with details
 - 📥 Data fetch operations
-- 📝 File write confirmations
-- 📊 Summary statistics
+- 📊 Aggregation statistics
+- 🎉 Summary with success/error counts
 
 ## Development
 
@@ -253,9 +280,41 @@ async function test() {
 test();
 ```
 
-### Debugging
+### Testing Supabase Updates
 
-Enable detailed logging by uncommenting console.log statements in normalizers or adding debug output in scrapers.
+```javascript
+const { updateVariant } = require('./services/supabase');
+
+async function testUpdate() {
+  await updateVariant(1992, {
+    reebelo_price: 499.99,
+    greengadgets_price: 849.00,
+    reebelo_stock: 5,
+    greengadgets_stock: 10,
+  });
+}
+
+testUpdate();
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**400 Bad Request Error**
+- Check column types in Supabase (prices should be `numeric(10,2)`)
+- Verify column names match exactly
+- Check RLS policies allow updates
+
+**No Prices Scraped**
+- Verify mappings exist in Supabase
+- Check competitor SKUs are correct
+- Ensure API keys are valid
+
+**Variant Not Updated**
+- Confirm variant ID exists in variants table
+- Check Supabase RLS policies
+- Verify network connectivity
 
 ## License
 
@@ -263,7 +322,7 @@ ISC
 
 ## Author
 
-Abdul Mueez
+Moiz
 
 ---
 
