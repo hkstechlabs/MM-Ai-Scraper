@@ -8,12 +8,9 @@ class ReebeloScraper {
     this.apiKey = 'aCkLJ6izdU67cduknwGtfkzjj'; // TODO: move to env
     this.currency = 'AUD';
 
-    // 🔑 Reebelo owns its own SKUs
-    this.skus = [
-      'APPLE-IPHONE-11-PRO-256GB-SPACE-GREY-EX-DISPLAYDEMO',
-      'APPLE-IPHONE-12-PRO-128GB-SILVER',
-      'APPLE-IPHONE-13-PRO-256GB-GRAPHITE',
-    ];
+    // SKUs will be loaded from Supabase mappings
+    this.skus = [];
+    this.skuToVariant = {};
   }
 
   /**
@@ -60,13 +57,33 @@ class ReebeloScraper {
   /**
    * Main runner
    */
-  async run() {
+  async run(mappings) {
+    // Load SKUs from Supabase mappings
+    if (mappings && mappings.reebelo) {
+      this.skus = mappings.reebelo.skus;
+      this.skuToVariant = mappings.reebelo.skuToVariant;
+    }
+
+    if (this.skus.length === 0) {
+      console.warn('⚠️ No Reebelo SKUs found in mappings');
+      return {
+        competitor: this.name,
+        fetchedAt: new Date().toISOString(),
+        skus: [],
+        prices: [],
+        rawResponses: {},
+      };
+    }
+
     const prices = [];
     const rawResponses = {};
 
     for (const sku of this.skus) {
       const offers = await this.fetchOffersBySku(sku);
       rawResponses[sku] = offers;
+
+      // Get variant info from mapping
+      const variantInfo = this.skuToVariant[sku] || {};
 
       for (const offer of offers) {
         const attrs = offer?.reebeloOffer?.attributes || {};
@@ -87,6 +104,12 @@ class ReebeloScraper {
           isCheapest: attrs.isCheapest,
 
           sourceUrl: offer?.reebeloOffer?.url,
+          
+          // Supabase mapping info
+          variantId: variantInfo.variantId,
+          mmSku: variantInfo.mmSku,
+          mappingId: variantInfo.mappingId,
+
           raw: offer,
         });
       }

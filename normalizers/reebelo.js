@@ -10,6 +10,12 @@ module.exports = function normalizeReebelo(result) {
     stock: p.stock,
     sourceUrl: p.sourceUrl,
     fetchedAt: result.fetchedAt,
+    
+    // Supabase mapping info
+    variantId: p.variantId,
+    mmSku: p.mmSku,
+    mappingId: p.mappingId,
+    
     raw: p.raw,
   }));
 };

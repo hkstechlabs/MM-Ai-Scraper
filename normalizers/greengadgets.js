@@ -10,6 +10,12 @@ module.exports = function normalizeGreenGadgets(result) {
     stock: p.available ? 1 : 0,
     sourceUrl: p.source_url,
     fetchedAt: result.fetchedAt,
+    
+    // Supabase mapping info
+    variantId: p.variantId,
+    mmSku: p.mmSku,
+    mappingId: p.mappingId,
+    
     raw: p,
   }));
 };

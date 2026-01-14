@@ -1,21 +1,22 @@
-const axios = require('axios');
 const scrapers = require('./scrapers');
 const normalize = require('./normalize');  // import normalize middleware
-
-const N8N_WEBHOOK_URL =
-  'https://ozmobiles.app.n8n.cloud/webhook/data_ingestor';
-
-async function sendToN8N(payload) {
-  await axios.post(N8N_WEBHOOK_URL, payload, {
-    timeout: 10000,
-  });
-}
+const { fetchMappings, transformMappings } = require('./services/supabase');
+const fs = require('fs').promises;
+const path = require('path');
 
 async function main() {
+  // Fetch mappings from Supabase first
+  console.log('📥 Fetching mappings from Supabase...');
+  const mappings = await fetchMappings();
+  const transformedMappings = transformMappings(mappings);
+  console.log(`✅ Loaded ${mappings.length} mappings from Supabase`);
+
+  const allResults = [];
+
   for (const scraper of scrapers) {
     try {
-      // Run scraper, no context here as you said
-      const result = await scraper.run();
+      // Pass mappings to scraper
+      const result = await scraper.run(transformedMappings);
 
       console.log(
         `✅ ${scraper.name} scraped`,
@@ -25,12 +26,10 @@ async function main() {
 
       // Normalize the raw result into unified format
       const normalizedData = normalize(scraper.name, result);
-      console.log(normalizedData)
-
-      // Send normalized data to n8n
-      await sendToN8N({
+      
+      allResults.push({
         source: scraper.name,
-        runAt: new Date().toISOString(),
+        scrapedAt: new Date().toISOString(),
         data: normalizedData,
       });
 
@@ -41,6 +40,20 @@ async function main() {
       );
     }
   }
+
+  // Write all results to a file
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `scraper-results-${timestamp}.json`;
+  const filepath = path.join(__dirname, 'results', filename);
+
+  // Ensure results directory exists
+  await fs.mkdir(path.join(__dirname, 'results'), { recursive: true });
+
+  // Write the file
+  await fs.writeFile(filepath, JSON.stringify(allResults, null, 2), 'utf8');
+  
+  console.log(`\n📝 Results written to: ${filepath}`);
+  console.log(`📊 Total items scraped: ${allResults.reduce((sum, r) => sum + r.data.length, 0)}`);
 }
 
 main().catch(err => {
