@@ -1,8 +1,51 @@
 const scrapers = require('./scrapers');
 const normalize = require('./normalize');  // import normalize middleware
-const { fetchMappings, transformMappings } = require('./services/supabase');
-const fs = require('fs').promises;
-const path = require('path');
+const { fetchMappings, transformMappings, updateVariant } = require('./services/supabase');
+
+/**
+ * Aggregate prices by variant ID
+ * Takes normalized data and groups by variantId, calculating best prices and total stock
+ */
+function aggregateByVariant(allNormalizedData) {
+  const variantMap = new Map();
+
+  for (const item of allNormalizedData) {
+    const { variantId, competitor, price, stock } = item;
+
+    if (!variantId) continue; // Skip items without variant mapping
+
+    if (!variantMap.has(variantId)) {
+      variantMap.set(variantId, {
+        variantId,
+        reebelo_price: null,
+        greengadgets_price: null,
+        reebelo_stock: null,
+        greengadgets_stock: null,
+      });
+    }
+
+    const variant = variantMap.get(variantId);
+
+    // Update competitor-specific fields
+    if (competitor === 'reebelo') {
+      // Take the lowest price if multiple offers exist
+      if (variant.reebelo_price === null || price < variant.reebelo_price) {
+        variant.reebelo_price = price;
+      }
+      // Sum up stock
+      variant.reebelo_stock = (variant.reebelo_stock || 0) + (stock || 0);
+    } else if (competitor === 'green-gadgets') {
+      // Take the lowest price if multiple offers exist
+      if (variant.greengadgets_price === null || price < variant.greengadgets_price) {
+        variant.greengadgets_price = price;
+      }
+      // Sum up stock
+      variant.greengadgets_stock = (variant.greengadgets_stock || 0) + (stock || 0);
+    }
+  }
+
+  return Array.from(variantMap.values());
+}
 
 async function main() {
   // Fetch mappings from Supabase first
@@ -11,7 +54,7 @@ async function main() {
   const transformedMappings = transformMappings(mappings);
   console.log(`✅ Loaded ${mappings.length} mappings from Supabase`);
 
-  const allResults = [];
+  const allNormalizedData = [];
 
   for (const scraper of scrapers) {
     try {
@@ -26,12 +69,7 @@ async function main() {
 
       // Normalize the raw result into unified format
       const normalizedData = normalize(scraper.name, result);
-      
-      allResults.push({
-        source: scraper.name,
-        scrapedAt: new Date().toISOString(),
-        data: normalizedData,
-      });
+      allNormalizedData.push(...normalizedData);
 
     } catch (err) {
       console.error(
@@ -41,19 +79,30 @@ async function main() {
     }
   }
 
-  // Write all results to a file
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `scraper-results-${timestamp}.json`;
-  const filepath = path.join(__dirname, 'results', filename);
+  // Aggregate data by variant
+  console.log('\n📊 Aggregating prices by variant...');
+  const variantUpdates = aggregateByVariant(allNormalizedData);
+  console.log(`📦 Found ${variantUpdates.length} variants to update`);
 
-  // Ensure results directory exists
-  await fs.mkdir(path.join(__dirname, 'results'), { recursive: true });
+  // Update each variant in Supabase
+  let successCount = 0;
+  let errorCount = 0;
 
-  // Write the file
-  await fs.writeFile(filepath, JSON.stringify(allResults, null, 2), 'utf8');
-  
-  console.log(`\n📝 Results written to: ${filepath}`);
-  console.log(`📊 Total items scraped: ${allResults.reduce((sum, r) => sum + r.data.length, 0)}`);
+  for (const update of variantUpdates) {
+    try {
+      const { variantId, ...fields } = update;
+      await updateVariant(variantId, fields);
+      successCount++;
+      console.log(`✅ Updated variant ${variantId}`);
+    } catch (err) {
+      errorCount++;
+      console.error(`❌ Failed to update variant ${update.variantId}:`, err.message);
+    }
+  }
+
+  console.log(`\n🎉 Update complete!`);
+  console.log(`   ✅ Success: ${successCount}`);
+  console.log(`   ❌ Errors: ${errorCount}`);
 }
 
 main().catch(err => {
