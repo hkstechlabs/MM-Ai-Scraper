@@ -184,21 +184,18 @@ const brandIds = {
 };
 /************ TYPE TO ID MAPPING ************/
 const typeIds = {
-  "Phone": 1,
-  "Smart Watch": 2,
-  "Tablet": 3,
-  "Laptop": 4,
-  "PlayStation": 5,
+  "AirPod": 1,
+  "Electric Scooter": 2,
+  "Headset": 3,
+  "Keyboard": 4,
+  "Laptop": 5,
   "Nintendo": 6,
-  "Xbox": 7,
-  "AirPod": 8,
-  "Headset": 9,
-  "Electric Scooter": 10,
-  "Keyboard": 11,
-  "Desktop": 12,
-  "Watch": 13,
-  "Headphones": 14,
-  "Speaker": 15
+  "Pencil": 7,
+  "Phone": 8,
+  "PlayStation": 9,
+  "Smart Watch": 10,
+  "Tablet": 11,
+  "Xbox": 12,
 };
 
 
@@ -233,6 +230,10 @@ async function loadProducts(brand, type) {
     );
 
     const products = await productsRes.json();
+    console.log('Selected brand:', brand, 'Selected type:', type);
+console.log('Brand ID:', brandIds[brand], 'Type ID:', typeIds[type]);
+console.log('Products from Supabase:', products);
+
 
     if (!products.length) {
       list.innerHTML = '<p>No products found</p>';
@@ -553,45 +554,116 @@ backBtn.onmouseout = () => backBtn.style.backgroundColor = '#731caf';
 
 const productsBackBtn = document.getElementById('products-back-btn');
 productsBackBtn.onclick = () => {
-  // Hide products, show brands
-  productsContainer.style.display = 'none';
-  brandsContainer.style.display = 'block';
-
-  // Clear brand from URL
+  // Remove brand from URL, keep type
   const params = new URLSearchParams(window.location.search);
   params.delete('brand');
   history.pushState({}, '', `?${params.toString()}`);
+
+  // Re-render the page based on updated URL
+  renderViewFromURL();
 };
+
 
 
 
 
 const brandsBackBtn = document.getElementById('back-btn');
 brandsBackBtn.onclick = () => {
-  brandsContainer.style.display = 'none';
-  typesContainer.style.display = 'grid';
-  document.getElementById('search-container').style.display = 'block';
-  filteredTypes = [...types];
-  renderTypes();
-
+  // Remove type and brand from URL
   const params = new URLSearchParams(window.location.search);
   params.delete('type');
   params.delete('brand');
   history.pushState({}, '', `?${params.toString()}`);
+
+  // Re-render the page based on updated URL
+  renderViewFromURL();
 };
-/************ URL HANDLING ************/
-function initView() {
+
+/************ INIT APP WITH ZERO FLASH ************/
+async function initApp() {
+  // Show loading state
+  typesContainer.style.display = 'none';
+  brandsContainer.style.display = 'none';
+  productsContainer.style.display = 'none';
+  document.getElementById('search-container').style.display = 'none';
+  const list = document.getElementById('products-list');
+  if (list) list.innerHTML = 'Loading...';
+
+  // 1️⃣ Load all data
+  await loadData();  // fetch types & brands
+
+  // 2️⃣ Render page based on URL
+  await renderViewFromURL();
+}
+
+/************ RENDER VIEW FROM URL ************/
+async function renderViewFromURL() {
   const params = new URLSearchParams(window.location.search);
   const type = params.get('type');
   const brand = params.get('brand');
 
-  if (type) {
-    showBrands(type);
-    if (brand) loadProducts(brand);
+  // Hide everything first
+  typesContainer.style.display = 'none';
+  brandsContainer.style.display = 'none';
+  productsContainer.style.display = 'none';
+  document.getElementById('search-container').style.display = 'none';
+
+  if (type && brand) {
+    // Product page
+    await loadProducts(brand, type);
+    return;
   }
+
+  if (type) {
+    // Brands page
+    showBrands(type);
+    return;
+  }
+
+  // Default types page
+  filteredTypes = [...types];
+  renderTypes();
+  typesContainer.style.display = 'grid';
+  document.getElementById('search-container').style.display = 'block';
 }
 
-window.onpopstate = initView;
+/************ OVERRIDE showBrands TO HIDE DOM PROPERLY ************/
+function showBrands(type) {
+  history.replaceState({ type }, '', `?type=${encodeURIComponent(type)}`);
 
-/************ INIT ************/
-loadData();
+  document.getElementById('brands-title').textContent = `Brands for ${type}`;
+  filteredBrands = [...brands];
+
+  // Hide other containers
+  typesContainer.style.display = 'none';
+  document.getElementById('search-container').style.display = 'none';
+  productsContainer.style.display = 'none';
+
+  renderBrands();
+  brandsContainer.style.display = 'block';
+}
+
+/************ HANDLE BACK/FORWARD ************/
+window.onpopstate = () => {
+  renderViewFromURL();
+};
+
+/************ LOAD DATA (remove initView inside loadData) ************/
+async function loadData() {
+  const res = await fetch(apiUrl);
+  const data = await res.json();
+
+  types = data.Type.sort();
+  brands = data.Brand.sort();
+
+  filteredTypes = [...types];
+  filteredBrands = [...brands];
+
+  renderTypes();
+  setupSearch();
+}
+
+// finally init app
+initApp();
+
+
