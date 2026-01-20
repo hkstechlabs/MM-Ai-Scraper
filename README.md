@@ -46,10 +46,31 @@ mm-scraper/
 npm install
 ```
 
+### Environment Setup
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+2. Fill in your actual credentials in the `.env` file:
+```bash
+# MM Shopify Configuration
+MM_ACCESS_TOKEN=your_shopify_access_token_here
+
+# Supabase Configuration
+SUPABASE_BASE_URL=your_supabase_base_url_here
+SUPABASE_API_KEY=your_supabase_api_key_here
+SUPABASE_AUTH_TOKEN=your_supabase_auth_token_here
+```
+
+**Important:** Never commit the `.env` file to version control. It contains sensitive credentials.
+
 ### Dependencies
 
 - **axios** - HTTP client for API requests
 - **playwright** - Browser automation (for future HTML scraping needs)
+- **dotenv** - Environment variable management
 
 ## Configuration
 

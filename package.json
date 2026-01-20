@@ -4,12 +4,16 @@
   "description": "Competitor data scraper for mobile monster",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "scrape": "node main.js",
+    "mm-sync": "node mmSync.js",
+    "test-mm-sync": "node testMMSync.js"
   },
   "author": "moiz",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
     "playwright": "^1.57.0"
   }
 }

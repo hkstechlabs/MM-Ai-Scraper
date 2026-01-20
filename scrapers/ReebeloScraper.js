@@ -44,9 +44,14 @@ class ReebeloScraper {
         page += 1;
 
       } catch (error) {
-        console.error(
-          `❌ Reebelo API error for SKU ${sku} (page ${page})`
-        );
+        console.error(`❌ Reebelo API error for SKU ${sku} (page ${page}):`);
+        console.error(`   URL: ${this.apiUrl}`);
+        console.error(`   Params:`, { search: sku, page });
+        console.error(`   Status: ${error.response?.status || 'No response'}`);
+        console.error(`   Status Text: ${error.response?.statusText || 'N/A'}`);
+        console.error(`   Response Data:`, JSON.stringify(error.response?.data, null, 2));
+        console.error(`   Request Headers:`, error.config?.headers);
+        console.error(`   Full Error:`, error.message);
         throw error;
       }
     }
@@ -64,6 +69,8 @@ class ReebeloScraper {
       this.skuToVariant = mappings.reebelo.skuToVariant;
     }
 
+    console.log(`🔍 Reebelo: Processing ${this.skus.length} SKUs:`, this.skus);
+
     if (this.skus.length === 0) {
       console.warn('⚠️ No Reebelo SKUs found in mappings');
       return {
@@ -79,8 +86,10 @@ class ReebeloScraper {
     const rawResponses = {};
 
     for (const sku of this.skus) {
+      console.log(`🔍 Fetching Reebelo offers for SKU: ${sku}`);
       const offers = await this.fetchOffersBySku(sku);
       rawResponses[sku] = offers;
+      console.log(`   Found ${offers.length} offers for SKU ${sku}`);
 
       // Get variant info from mapping
       const variantInfo = this.skuToVariant[sku] || {};
@@ -109,6 +118,7 @@ class ReebeloScraper {
           variantId: variantInfo.variantId,
           mmSku: variantInfo.mmSku,
           mappingId: variantInfo.mappingId,
+          productId: variantInfo.productId,
 
           raw: offer,
         });

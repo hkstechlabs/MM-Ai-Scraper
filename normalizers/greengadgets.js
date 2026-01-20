@@ -15,6 +15,7 @@ module.exports = function normalizeGreenGadgets(result) {
     variantId: p.variantId,
     mmSku: p.mmSku,
     mappingId: p.mappingId,
+    productId: p.productId, // Add productId
     
     raw: p,
   }));
