@@ -1,10 +1,10 @@
 const scrapers = require('./scrapers');
-const normalize = require('./normalize');  
+const normalize = require('./normalize');
 const axios = require('axios');
 require('dotenv').config();
-const { 
-  fetchMappings, 
-  transformMappings, 
+const {
+  fetchMappings,
+  transformMappings,
   insertScrapedData,
   updateVariant
 } = require('./services/supabase');
@@ -59,7 +59,7 @@ function aggregateByVariant(allNormalizedData) {
 async function main() {
   const overallStartTime = new Date();
   console.log('📥 Fetching mappings from Supabase...');
-  
+
   // Create overall execution record
   let overallExecutionId = null;
   try {
@@ -69,13 +69,13 @@ async function main() {
       reebelo_status: 'pending',
       executed_by: 'node-scraper',
       notes: 'Starting full scraper execution for both Green Gadgets and Reebelo'
-    }, { 
+    }, {
       headers: {
         ...headers,
         'Prefer': 'return=representation'
       }
     });
-    
+
     overallExecutionId = response.data[0]?.id;
     console.log(`📝 Created overall execution record: ${overallExecutionId}`);
   } catch (createError) {
@@ -102,7 +102,7 @@ async function main() {
         } else if (scraper.name === 'green-gadgets') {
           statusUpdate.gg_status = 'running';
         }
-        
+
         await axios.patch(
           `${SUPABASE_BASE_URL}/executions?id=eq.${overallExecutionId}`,
           statusUpdate,
@@ -130,7 +130,7 @@ async function main() {
         } else if (scraper.name === 'green-gadgets') {
           statusUpdate.gg_status = 'completed';
         }
-        
+
         await axios.patch(
           `${SUPABASE_BASE_URL}/executions?id=eq.${overallExecutionId}`,
           statusUpdate,
@@ -144,7 +144,7 @@ async function main() {
 
     } catch (err) {
       console.error(`❌ Error processing scraper ${scraper.name}:`, err.message);
-      
+
       // Store error for final update
       if (scraper.name === 'reebelo') {
         reebeloError = err.message;
@@ -162,14 +162,14 @@ async function main() {
           statusUpdate.gg_status = 'failed';
           statusUpdate.gg_error = err.message;
         }
-        
+
         await axios.patch(
           `${SUPABASE_BASE_URL}/executions?id=eq.${overallExecutionId}`,
           statusUpdate,
           { headers }
         );
       }
-      
+
       // Add detailed error logging for HTTP errors
       if (err.response) {
         console.error(`   HTTP Status: ${err.response.status}`);
@@ -180,16 +180,16 @@ async function main() {
         console.error(`   Request Headers:`, err.config?.headers);
         console.error(`   Request Params:`, err.config?.params);
       }
-      
+
       console.error(`   Full error stack:`, err.stack);
     }
   }
 
   console.log('\n📊 Processing scraped data...');
-  
+
   // Prepare scraped data entries for the new table
   const scrapedDataEntries = [];
-  
+
   for (const item of allNormalizedData) {
     if (item.variantId && item.price !== null && item.price !== undefined) {
       scrapedDataEntries.push({
@@ -203,7 +203,7 @@ async function main() {
         product_handle: item.product_handle,
         raw: item.raw
       });
-      
+
       // Debug the first entry
       if (scrapedDataEntries.length === 1) {
         console.log(`🔍 Sample normalized item:`, {
